@@ -32,6 +32,8 @@ export function ReviewStep() {
         setCurrentStep,
         visionConfig,
         addToHistory,
+        canAddToHistory,
+        getHistoryCount,
     } = useWorkflowStore();
     const t = useTranslation(language);
     const [isRendering, setIsRendering] = useState(false);
@@ -43,6 +45,19 @@ export function ReviewStep() {
     };
 
     const handleRender = async () => {
+        // Check history limit first
+        if (!canAddToHistory()) {
+            toast.error(
+                language === 'zh'
+                    ? '🚫 缓存已满（2/2）！请先到【步骤3】下载保存图片，然后删除历史记录后再渲染。'
+                    : '🚫 Cache full (2/2)! Please go to Step 3 to download and delete history before rendering.',
+                { duration: 5000 }
+            );
+            // Navigate to step 3 so user can manage history
+            setCurrentStep(3);
+            return;
+        }
+
         if (!visionConfig.apiKey) {
             toast.error(t('missingApiKey'));
             return;
@@ -60,9 +75,9 @@ export function ReviewStep() {
                 setGeneratedImage(response.imageUrl);
                 addToHistory({ schema: generatedSchema, imageUrl: response.imageUrl });
                 setCurrentStep(3);
-                toast.success('Image rendered successfully!');
+                toast.success(language === 'zh' ? '图片渲染成功！' : 'Image rendered successfully!');
             } else {
-                toast.error('No image was generated. Please check your model configuration.');
+                toast.error(language === 'zh' ? '未生成图片，请检查模型配置' : 'No image was generated. Please check your model configuration.');
             }
         } catch (error) {
             console.error(error);

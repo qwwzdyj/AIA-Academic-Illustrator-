@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, FileText, History as HistoryIcon, ImageIcon, Trash2, AlertTriangle } from 'lucide-react';
+import { Download, FileText, History as HistoryIcon, ImageIcon, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useWorkflowStore } from '@/store/workflowStore';
@@ -17,8 +17,7 @@ export function RendererStep() {
         loadFromHistory,
         deleteFromHistory,
         clearHistory,
-        storageWarning,
-        setStorageWarning,
+        getHistoryCount,
     } = useWorkflowStore();
     const t = useTranslation(language);
 
@@ -53,7 +52,7 @@ export function RendererStep() {
     const handleDeleteHistory = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         deleteFromHistory(id);
-        toast.success(language === 'zh' ? '已删除' : 'Deleted');
+        toast.success(language === 'zh' ? '已删除，现在可以继续渲染' : 'Deleted, you can now render');
     };
 
     const handleClearHistory = () => {
@@ -63,6 +62,9 @@ export function RendererStep() {
         }
     };
 
+    const historyCount = getHistoryCount();
+    const isHistoryFull = historyCount >= 2;
+
     return (
         <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -70,32 +72,26 @@ export function RendererStep() {
             exit={{ opacity: 0, x: 20 }}
             className="max-w-7xl mx-auto"
         >
-            {/* Storage Warning */}
+            {/* History Full Warning */}
             <AnimatePresence>
-                {storageWarning && (
+                {isHistoryFull && (
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3"
                     >
-                        <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                             <p className="text-sm font-medium text-amber-800">
-                                {language === 'zh' ? '存储空间不足' : 'Storage space is full'}
+                                {language === 'zh' ? '⚠️ 缓存已满' : '⚠️ Cache Full'}
                             </p>
                             <p className="text-sm text-amber-700 mt-1">
                                 {language === 'zh'
-                                    ? '请下载保存您的图片，然后清空历史记录以释放空间。'
-                                    : 'Please download your images and clear history to free up space.'}
+                                    ? '请下载保存您需要的图片，然后删除历史记录以继续渲染新图片。'
+                                    : 'Please download images you need, then delete history to render new images.'}
                             </p>
                         </div>
-                        <button
-                            onClick={() => setStorageWarning(false)}
-                            className="text-amber-500 hover:text-amber-700"
-                        >
-                            ×
-                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -133,9 +129,9 @@ export function RendererStep() {
                         {generatedImage && (
                             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                 <p className="text-sm text-blue-700">
-                                    💡 {language === 'zh'
-                                        ? '提示：图片不会自动保存，请点击"下载图片"保存到本地。'
-                                        : 'Tip: Images are not automatically saved. Click "Download Image" to save locally.'}
+                                    💾 {language === 'zh'
+                                        ? '重要：请点击「下载图片」保存到本地！关闭页面后需要从历史记录重新加载。'
+                                        : 'Important: Click "Download Image" to save locally!'}
                                 </p>
                             </div>
                         )}
@@ -174,6 +170,9 @@ export function RendererStep() {
                             <div className="flex items-center gap-2">
                                 <HistoryIcon className="w-4 h-4 text-slate-500" />
                                 <h3 className="font-semibold text-slate-900">{t('history')}</h3>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${isHistoryFull ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
+                                    {historyCount}/2
+                                </span>
                             </div>
                             {history.length > 0 && (
                                 <button
@@ -200,9 +199,17 @@ export function RendererStep() {
                                             onClick={() => loadFromHistory(item.id)}
                                             className="w-full p-2 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors text-left"
                                         >
-                                            <div className="w-full h-16 bg-slate-100 rounded mb-2 flex items-center justify-center">
-                                                <ImageIcon className="w-6 h-6 text-slate-400" />
-                                            </div>
+                                            {item.imageUrl ? (
+                                                <img
+                                                    src={item.imageUrl}
+                                                    alt="History item"
+                                                    className="w-full h-20 object-cover rounded mb-2"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-20 bg-slate-100 rounded mb-2 flex items-center justify-center">
+                                                    <ImageIcon className="w-6 h-6 text-slate-400" />
+                                                </div>
+                                            )}
                                             <p className="text-xs text-slate-500">
                                                 {new Date(item.timestamp).toLocaleString()}
                                             </p>
@@ -211,6 +218,7 @@ export function RendererStep() {
                                         <button
                                             onClick={(e) => handleDeleteHistory(item.id, e)}
                                             className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title={language === 'zh' ? '删除' : 'Delete'}
                                         >
                                             <Trash2 className="w-3 h-3" />
                                         </button>
@@ -219,11 +227,11 @@ export function RendererStep() {
                             )}
                         </div>
 
-                        {/* Storage info */}
+                        {/* Help text */}
                         <p className="mt-4 text-xs text-slate-400 text-center">
                             {language === 'zh'
-                                ? `历史记录: ${history.length}/5`
-                                : `History: ${history.length}/5`}
+                                ? '点击历史记录可加载，悬停显示删除按钮'
+                                : 'Click to load, hover to delete'}
                         </p>
                     </div>
                 </div>

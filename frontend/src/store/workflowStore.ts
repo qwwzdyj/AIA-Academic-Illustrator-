@@ -12,7 +12,6 @@ export interface HistoryItem {
     timestamp: number;
     schema: string;
     imageUrl: string | null;
-    thumbnail?: string; // Small thumbnail for display (to save space)
 }
 
 interface WorkflowState {
@@ -28,7 +27,6 @@ interface WorkflowState {
     generatedImage: string | null;
     referenceImages: string[]; // Base64 encoded
     history: HistoryItem[];
-    storageWarning: boolean; // Flag to show storage warning
 
     // Hydration flag
     _hasHydrated: boolean;
@@ -44,13 +42,14 @@ interface WorkflowState {
     addReferenceImage: (image: string) => void;
     removeReferenceImage: (index: number) => void;
     clearReferenceImages: () => void;
-    addToHistory: (item: Omit<HistoryItem, 'id' | 'timestamp' | 'thumbnail'>) => void;
+    addToHistory: (item: Omit<HistoryItem, 'id' | 'timestamp'>) => void;
     loadFromHistory: (id: string) => void;
     deleteFromHistory: (id: string) => void;
     clearHistory: () => void;
     resetProject: () => void;
     setHasHydrated: (state: boolean) => void;
-    setStorageWarning: (show: boolean) => void;
+    canAddToHistory: () => boolean; // Check if we can add new history
+    getHistoryCount: () => number;
 }
 
 const defaultLogicConfig: ModelConfig = {
@@ -65,16 +64,8 @@ const defaultVisionConfig: ModelConfig = {
     modelName: 'gemini-3-pro-image-preview',
 };
 
-// Max history items to keep (to prevent storage overflow)
-const MAX_HISTORY_ITEMS = 5;
-
-// Create a thumbnail from a base64 image (reduce size for storage)
-function createThumbnail(imageUrl: string | null): string | undefined {
-    if (!imageUrl) return undefined;
-    // For now, just return the first 1000 chars as a marker
-    // In production, you'd resize the image
-    return imageUrl.substring(0, 100) + '...';
-}
+// Maximum number of history items with images (to prevent storage overflow)
+const MAX_HISTORY_ITEMS = 2;
 
 // Safe localStorage wrapper with quota handling
 const safeStorage = {
@@ -89,11 +80,8 @@ const safeStorage = {
         try {
             localStorage.setItem(name, value);
         } catch (e) {
-            if (e instanceof Error && e.name === 'QuotaExceededError') {
-                // Storage full - we'll handle this in the store
-                console.warn('localStorage quota exceeded');
-                throw e;
-            }
+            console.warn('localStorage quota exceeded:', e);
+            throw e;
         }
     },
     removeItem: (name: string): void => {
@@ -118,7 +106,6 @@ export const useWorkflowStore = create<WorkflowState>()(
             generatedImage: null,
             referenceImages: [],
             history: [],
-            storageWarning: false,
             _hasHydrated: false,
 
             // Actions
@@ -140,26 +127,35 @@ export const useWorkflowStore = create<WorkflowState>()(
 
             clearReferenceImages: () => set({ referenceImages: [] }),
 
+            // Check if we can add new history (limit: 2)
+            canAddToHistory: () => {
+                return get().history.length < MAX_HISTORY_ITEMS;
+            },
+
+            getHistoryCount: () => {
+                return get().history.length;
+            },
+
             addToHistory: (item) => {
                 const state = get();
+                // Don't add if at limit
+                if (state.history.length >= MAX_HISTORY_ITEMS) {
+                    console.warn('History limit reached, cannot add new item');
+                    return;
+                }
+
                 const newItem: HistoryItem = {
                     ...item,
                     id: crypto.randomUUID(),
                     timestamp: Date.now(),
-                    thumbnail: createThumbnail(item.imageUrl),
-                    // Don't store full image in history to save space
-                    imageUrl: null,
                 };
 
-                // Keep only limited items
-                const newHistory = [newItem, ...state.history.slice(0, MAX_HISTORY_ITEMS - 1)];
+                const newHistory = [newItem, ...state.history];
 
                 try {
-                    set({ history: newHistory, storageWarning: false });
+                    set({ history: newHistory });
                 } catch (e) {
-                    // If storage is full, show warning and don't add to history
                     console.warn('Failed to save to history:', e);
-                    set({ storageWarning: true });
                 }
             },
 
@@ -168,21 +164,17 @@ export const useWorkflowStore = create<WorkflowState>()(
                 if (item) {
                     set({
                         generatedSchema: item.schema,
-                        // Note: imageUrl is not stored in history anymore
-                        generatedImage: null,
+                        generatedImage: item.imageUrl,
+                        currentStep: 3, // Go to step 3 to view the image
                     });
                 }
             },
 
             deleteFromHistory: (id) => set((state) => ({
                 history: state.history.filter((h) => h.id !== id),
-                storageWarning: false, // Reset warning after deleting
             })),
 
-            clearHistory: () => set({
-                history: [],
-                storageWarning: false
-            }),
+            clearHistory: () => set({ history: [] }),
 
             resetProject: () => set({
                 paperContent: '',
@@ -193,7 +185,6 @@ export const useWorkflowStore = create<WorkflowState>()(
             }),
 
             setHasHydrated: (state) => set({ _hasHydrated: state }),
-            setStorageWarning: (show) => set({ storageWarning: show }),
         }),
         {
             name: 'academic-illustrator-storage',
@@ -204,11 +195,8 @@ export const useWorkflowStore = create<WorkflowState>()(
                 language: state.language,
                 paperContent: state.paperContent,
                 generatedSchema: state.generatedSchema,
-                // Don't persist: generatedImage (too large), referenceImages
-                history: state.history.map(h => ({
-                    ...h,
-                    imageUrl: null, // Don't store full images
-                })),
+                // Save full images in history (max 2 items)
+                history: state.history,
             }),
             onRehydrateStorage: () => (state) => {
                 state?.setHasHydrated(true);
