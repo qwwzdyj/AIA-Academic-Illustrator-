@@ -21,7 +21,7 @@
 
 ---
 
-![效果图](frontend/image%20copy.png)
+![效果图](frontend/demo_screenshot.png)
 
 ## ✨ 功能特点
 
