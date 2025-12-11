@@ -223,12 +223,26 @@ export async function renderImage(
         return await renderImageGoogleNative(visualSchema, config);
     }
 
+    // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
+    // 1. 清理用户可能误填的 /chat/completions 后缀
+    let finalBaseUrl = config.baseUrl.replace(/\/chat\/completions\/?$/, '');
+
+    // 2. 清理末尾可能多余的斜杠 (防止 .ai//v1 这种情况)
+    finalBaseUrl = finalBaseUrl.replace(/\/$/, '');
+
+    // 3. 判断是否需要补充 /v1
+    const isOfficialGoogle = finalBaseUrl.includes('googleapis.com') || finalBaseUrl.includes('goog');
+
+    // 只有在非 Google 官方地址，且当前不以 /v1 结尾时，才追加 /v1
+    if (!isOfficialGoogle && !finalBaseUrl.endsWith('/v1')) {
+        finalBaseUrl = finalBaseUrl + '/v1';
+    }
+
     const client = new OpenAI({
         apiKey: config.apiKey,
-        baseURL: config.baseUrl,
+        baseURL: finalBaseUrl,
         dangerouslyAllowBrowser: true,
     });
-
     // Choose template based on whether reference images are provided
     let prompt: string;
     if (referenceImages && referenceImages.length > 0) {
@@ -263,7 +277,7 @@ export async function renderImage(
         max_tokens: 4096,
     });
 
-    const resultContent = response.choices[0]?.message?.content || '';
+    const resultContent = response.choices?.[0]?.message?.content || '';
 
     // Try to extract image from response
     if (resultContent) {
