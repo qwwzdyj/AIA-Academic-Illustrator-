@@ -106,11 +106,21 @@ export async function generateSchema(
     // (unless it's Google, which uses a different format handled above)
     // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
     // (unless it's Google, which uses a different format handled above)
+    // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
+    // (unless it's Google, which uses a different format handled above)
+    // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
+    // (unless it's Google, which uses a different format handled above)
     let finalBaseUrl = config.baseUrl;
     if (!isGoogleModel && !finalBaseUrl.includes('googleapis') && !finalBaseUrl.endsWith('/v1') && !finalBaseUrl.endsWith('/v1/')) {
         // Simple heuristic: if it doesn't look like it has a version path, append /v1
         finalBaseUrl = finalBaseUrl.replace(/\/$/, '') + '/v1';
     }
+
+    const client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: finalBaseUrl,
+        dangerouslyAllowBrowser: true, // Allow browser usage for static export
+    });
 
     const prompt = ARCHITECT_PROMPT_TEMPLATE.replace('{paper_content}', paperContent);
 
@@ -135,30 +145,14 @@ export async function generateSchema(
         }];
     }
 
-    // Use Server-Side Proxy to avoid CORS issues
-    const response = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            apiKey: config.apiKey,
-            baseUrl: finalBaseUrl,
-            path: '/chat/completions',
-            body: {
-                model: config.modelName,
-                messages: [{ role: 'user', content }],
-                temperature: 0.7,
-                max_tokens: 4096,
-            }
-        })
+    const response = await client.chat.completions.create({
+        model: config.modelName,
+        messages: [{ role: 'user', content }],
+        temperature: 0.7,
+        max_tokens: 4096,
     });
 
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`Proxy Error: ${err.error || response.statusText}`);
-    }
-
-    const data = await response.json();
-    const schema = data.choices?.[0]?.message?.content || '';
+    const schema = response.choices?.[0]?.message?.content || '';
     return { schema };
 }
 
@@ -249,6 +243,12 @@ export async function renderImage(
         finalBaseUrl = finalBaseUrl + '/v1';
     }
 
+    const client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: finalBaseUrl,
+        dangerouslyAllowBrowser: true, // Allow browser usage for static export
+    });
+
     // Choose template based on whether reference images are provided
     let prompt: string;
     if (referenceImages && referenceImages.length > 0) {
@@ -276,30 +276,14 @@ export async function renderImage(
         }];
     }
 
-    // Use Server-Side Proxy to avoid CORS issues
-    const response = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            apiKey: config.apiKey,
-            baseUrl: finalBaseUrl,
-            path: '/chat/completions',
-            body: {
-                model: config.modelName,
-                messages: [{ role: 'user', content }],
-                temperature: 0.7,
-                max_tokens: 4096,
-            }
-        })
+    const response = await client.chat.completions.create({
+        model: config.modelName,
+        messages: [{ role: 'user', content }],
+        temperature: 0.7,
+        max_tokens: 4096,
     });
 
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`Proxy Error: ${err.error || response.statusText}`);
-    }
-
-    const data = await response.json();
-    const resultContent = data.choices?.[0]?.message?.content || '';
+    const resultContent = response.choices?.[0]?.message?.content || '';
 
     // Try to extract image from response
     if (resultContent) {
