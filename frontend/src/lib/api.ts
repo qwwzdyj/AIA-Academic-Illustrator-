@@ -104,50 +104,61 @@ export async function generateSchema(
 
     // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
     // (unless it's Google, which uses a different format handled above)
+    // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
+    // (unless it's Google, which uses a different format handled above)
     let finalBaseUrl = config.baseUrl;
     if (!isGoogleModel && !finalBaseUrl.includes('googleapis') && !finalBaseUrl.endsWith('/v1') && !finalBaseUrl.endsWith('/v1/')) {
         // Simple heuristic: if it doesn't look like it has a version path, append /v1
-        // This helps with users entering 'https://yunwu.ai' instead of 'https://yunwu.ai/v1'
         finalBaseUrl = finalBaseUrl.replace(/\/$/, '') + '/v1';
     }
-
-    const client = new OpenAI({
-        apiKey: config.apiKey,
-        baseURL: finalBaseUrl,
-        dangerouslyAllowBrowser: true, // Allow browser usage
-    });
 
     const prompt = ARCHITECT_PROMPT_TEMPLATE.replace('{paper_content}', paperContent);
 
     // Build message content
-    let content: OpenAI.Chat.ChatCompletionContentPart[];
+    let content: any[];
 
     if (inputImages && inputImages.length > 0) {
         // Multimodal format with images
         content = inputImages.map((img) => ({
-            type: 'image_url' as const,
+            type: 'image_url',
             image_url: { url: img },
         }));
         content.push({
-            type: 'text' as const,
+            type: 'text',
             text: prompt,
         });
     } else {
         // Text only
         content = [{
-            type: 'text' as const,
+            type: 'text',
             text: prompt,
         }];
     }
 
-    const response = await client.chat.completions.create({
-        model: config.modelName,
-        messages: [{ role: 'user', content }],
-        temperature: 0.7,
-        max_tokens: 4096,
+    // Use Server-Side Proxy to avoid CORS issues
+    const response = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            apiKey: config.apiKey,
+            baseUrl: finalBaseUrl,
+            path: '/chat/completions',
+            body: {
+                model: config.modelName,
+                messages: [{ role: 'user', content }],
+                temperature: 0.7,
+                max_tokens: 4096,
+            }
+        })
     });
 
-    const schema = response.choices?.[0]?.message?.content || '';
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(`Proxy Error: ${err.error || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const schema = data.choices?.[0]?.message?.content || '';
     return { schema };
 }
 
@@ -238,11 +249,6 @@ export async function renderImage(
         finalBaseUrl = finalBaseUrl + '/v1';
     }
 
-    const client = new OpenAI({
-        apiKey: config.apiKey,
-        baseURL: finalBaseUrl,
-        dangerouslyAllowBrowser: true,
-    });
     // Choose template based on whether reference images are provided
     let prompt: string;
     if (referenceImages && referenceImages.length > 0) {
@@ -252,32 +258,48 @@ export async function renderImage(
     }
 
     // Build message content
-    let content: OpenAI.Chat.ChatCompletionContentPart[];
+    let content: any[];
 
     if (referenceImages && referenceImages.length > 0) {
         content = referenceImages.map((img) => ({
-            type: 'image_url' as const,
+            type: 'image_url',
             image_url: { url: img },
         }));
         content.push({
-            type: 'text' as const,
+            type: 'text',
             text: prompt,
         });
     } else {
         content = [{
-            type: 'text' as const,
+            type: 'text',
             text: prompt,
         }];
     }
 
-    const response = await client.chat.completions.create({
-        model: config.modelName,
-        messages: [{ role: 'user', content }],
-        temperature: 0.7,
-        max_tokens: 4096,
+    // Use Server-Side Proxy to avoid CORS issues
+    const response = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            apiKey: config.apiKey,
+            baseUrl: finalBaseUrl,
+            path: '/chat/completions',
+            body: {
+                model: config.modelName,
+                messages: [{ role: 'user', content }],
+                temperature: 0.7,
+                max_tokens: 4096,
+            }
+        })
     });
 
-    const resultContent = response.choices?.[0]?.message?.content || '';
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(`Proxy Error: ${err.error || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const resultContent = data.choices?.[0]?.message?.content || '';
 
     // Try to extract image from response
     if (resultContent) {
@@ -294,7 +316,23 @@ export async function renderImage(
         }
     }
 
-    // If no image found, return text response
+    // Attempt to parse JSON response if model outputted JSON
+    try {
+        const jsonMatch = resultContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const jsonPart = JSON.parse(jsonMatch[0]);
+            if (jsonPart.image_url) return { imageUrl: jsonPart.image_url };
+            if (jsonPart.b64_json) return { imageUrl: `data:image/png;base64,${jsonPart.b64_json}` };
+        }
+    } catch (e) {
+        // Ignore JSON parse error
+    }
+
+    // Fallback: Return raw content if it looks like a URL
+    if (resultContent.startsWith('http')) {
+        return { imageUrl: resultContent.trim() };
+    }
+
     return { imageUrl: null, text: resultContent };
 }
 
