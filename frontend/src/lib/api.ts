@@ -152,12 +152,27 @@ export async function generateSchema(
         })
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`Proxy Error: ${err.error || response.statusText}`);
+        // Try to parse as JSON, fallback to raw text
+        let errorMessage = responseText;
+        try {
+            const errorJson = JSON.parse(responseText);
+            errorMessage = errorJson.error || errorJson.message || responseText;
+        } catch (e) {
+            // Response is not JSON, use raw text (e.g., HTML error page)
+        }
+        throw new Error(`Proxy Error (${response.status}): ${errorMessage.substring(0, 200)}`);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch (e) {
+        throw new Error(`Invalid JSON response from API: ${responseText.substring(0, 200)}`);
+    }
+
     const schema = data.choices?.[0]?.message?.content || '';
     return { schema };
 }
@@ -293,12 +308,27 @@ export async function renderImage(
         })
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`Proxy Error: ${err.error || response.statusText}`);
+        // Try to parse as JSON, fallback to raw text
+        let errorMessage = responseText;
+        try {
+            const errorJson = JSON.parse(responseText);
+            errorMessage = errorJson.error || errorJson.message || responseText;
+        } catch (e) {
+            // Response is not JSON, use raw text (e.g., HTML error page)
+        }
+        throw new Error(`Proxy Error (${response.status}): ${errorMessage.substring(0, 200)}`);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch (e) {
+        throw new Error(`Invalid JSON response from API: ${responseText.substring(0, 200)}`);
+    }
+
     const resultContent = data.choices?.[0]?.message?.content || '';
 
     // Try to extract image from response
