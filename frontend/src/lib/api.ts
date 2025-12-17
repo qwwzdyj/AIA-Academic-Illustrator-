@@ -135,45 +135,21 @@ export async function generateSchema(
         }];
     }
 
-    // Use Server-Side Proxy to avoid CORS issues
-    const response = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            apiKey: config.apiKey,
-            baseUrl: finalBaseUrl,
-            path: '/chat/completions',
-            body: {
-                model: config.modelName,
-                messages: [{ role: 'user', content }],
-                temperature: 0.7,
-                max_tokens: 4096,
-            }
-        })
+    // Direct client-side API call (pure frontend mode)
+    const client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: finalBaseUrl,
+        dangerouslyAllowBrowser: true,
     });
 
-    const responseText = await response.text();
+    const response = await client.chat.completions.create({
+        model: config.modelName,
+        messages: [{ role: 'user', content }],
+        temperature: 0.7,
+        max_tokens: 4096,
+    });
 
-    if (!response.ok) {
-        // Try to parse as JSON, fallback to raw text
-        let errorMessage = responseText;
-        try {
-            const errorJson = JSON.parse(responseText);
-            errorMessage = errorJson.error || errorJson.message || responseText;
-        } catch (e) {
-            // Response is not JSON, use raw text (e.g., HTML error page)
-        }
-        throw new Error(`Proxy Error (${response.status}): ${errorMessage.substring(0, 200)}`);
-    }
-
-    let data;
-    try {
-        data = JSON.parse(responseText);
-    } catch (e) {
-        throw new Error(`Invalid JSON response from API: ${responseText.substring(0, 200)}`);
-    }
-
-    const schema = data.choices?.[0]?.message?.content || '';
+    const schema = response.choices?.[0]?.message?.content || '';
     return { schema };
 }
 
@@ -291,45 +267,21 @@ export async function renderImage(
         }];
     }
 
-    // Use Server-Side Proxy to avoid CORS issues
-    const response = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            apiKey: config.apiKey,
-            baseUrl: finalBaseUrl,
-            path: '/chat/completions',
-            body: {
-                model: config.modelName,
-                messages: [{ role: 'user', content }],
-                temperature: 0.7,
-                max_tokens: 4096,
-            }
-        })
+    // Direct client-side API call (pure frontend mode)
+    const client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: finalBaseUrl,
+        dangerouslyAllowBrowser: true,
     });
 
-    const responseText = await response.text();
+    const response = await client.chat.completions.create({
+        model: config.modelName,
+        messages: [{ role: 'user', content }],
+        temperature: 0.7,
+        max_tokens: 4096,
+    });
 
-    if (!response.ok) {
-        // Try to parse as JSON, fallback to raw text
-        let errorMessage = responseText;
-        try {
-            const errorJson = JSON.parse(responseText);
-            errorMessage = errorJson.error || errorJson.message || responseText;
-        } catch (e) {
-            // Response is not JSON, use raw text (e.g., HTML error page)
-        }
-        throw new Error(`Proxy Error (${response.status}): ${errorMessage.substring(0, 200)}`);
-    }
-
-    let data;
-    try {
-        data = JSON.parse(responseText);
-    } catch (e) {
-        throw new Error(`Invalid JSON response from API: ${responseText.substring(0, 200)}`);
-    }
-
-    const resultContent = data.choices?.[0]?.message?.content || '';
+    const resultContent = response.choices?.[0]?.message?.content || '';
 
     // Try to extract image from response
     if (resultContent) {
