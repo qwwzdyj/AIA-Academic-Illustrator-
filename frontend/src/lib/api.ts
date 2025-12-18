@@ -146,7 +146,6 @@ export async function generateSchema(
         model: config.modelName,
         messages: [{ role: 'user', content }],
         temperature: 0.7,
-        max_completion_tokens: 4096,
     });
 
     const schema = response.choices?.[0]?.message?.content || '';
@@ -274,7 +273,6 @@ export async function renderImage(
         model: config.modelName,
         messages: [{ role: 'user', content }],
         temperature: 0.7,
-        max_completion_tokens: 4096,
     });
 
     const resultContent = response.choices?.[0]?.message?.content || '';
