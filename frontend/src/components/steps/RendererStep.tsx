@@ -107,7 +107,7 @@ export function RendererStep() {
                                     variant="outline"
                                     size="sm"
                                     onClick={handleExportSchema}
-                                    className="border-slate-200"
+                                    className="border-slate-800 text-slate-800 hover:bg-slate-100"
                                 >
                                     <FileText className="w-4 h-4 mr-1.5" />
                                     {t('exportSchema')}
@@ -117,7 +117,7 @@ export function RendererStep() {
                                     size="sm"
                                     onClick={handleDownloadImage}
                                     disabled={!generatedImage}
-                                    className="border-slate-200"
+                                    className="border-slate-800 text-slate-800 hover:bg-slate-100 disabled:border-slate-300 disabled:text-slate-300"
                                 >
                                     <Download className="w-4 h-4 mr-1.5" />
                                     {t('downloadImage')}

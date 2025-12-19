@@ -106,21 +106,11 @@ export async function generateSchema(
     // (unless it's Google, which uses a different format handled above)
     // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
     // (unless it's Google, which uses a different format handled above)
-    // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
-    // (unless it's Google, which uses a different format handled above)
-    // Normalize Base URL: Ensure it ends with /v1 if it's a custom OpenAI endpoint and missing it
-    // (unless it's Google, which uses a different format handled above)
     let finalBaseUrl = config.baseUrl;
     if (!isGoogleModel && !finalBaseUrl.includes('googleapis') && !finalBaseUrl.endsWith('/v1') && !finalBaseUrl.endsWith('/v1/')) {
         // Simple heuristic: if it doesn't look like it has a version path, append /v1
         finalBaseUrl = finalBaseUrl.replace(/\/$/, '') + '/v1';
     }
-
-    const client = new OpenAI({
-        apiKey: config.apiKey,
-        baseURL: finalBaseUrl,
-        dangerouslyAllowBrowser: true, // Allow browser usage for static export
-    });
 
     const prompt = ARCHITECT_PROMPT_TEMPLATE.replace('{paper_content}', paperContent);
 
@@ -145,11 +135,17 @@ export async function generateSchema(
         }];
     }
 
+    // Direct client-side API call (pure frontend mode)
+    const client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: finalBaseUrl,
+        dangerouslyAllowBrowser: true,
+    });
+
     const response = await client.chat.completions.create({
         model: config.modelName,
         messages: [{ role: 'user', content }],
         temperature: 0.7,
-        max_tokens: 4096,
     });
 
     const schema = response.choices?.[0]?.message?.content || '';
@@ -217,14 +213,10 @@ export async function renderImage(
     referenceImages?: string[]
 ): Promise<RenderImageResponse> {
 
-    // Check if we should use Google Native API (e.g. for gemini-3-pro-image-preview)
-    // Check if we should use Google Native API (e.g. for gemini-3-pro-image-preview)
-    // ONLY use Native API if it's a Google endpoint. If it's a proxy (like yunwu.ai), use OpenAI client.
-    const isGoogleModel = config.modelName.toLowerCase().includes('gemini');
-    const isGoogleEndpoint = config.baseUrl.includes('googleapis.com') || config.baseUrl.includes('goog') || !config.baseUrl;
-    const shouldUseNative = isGoogleModel && isGoogleEndpoint && config.modelName.includes('gemini-3');
+    // If using Google's official API (googleapis.com), use Google Native SDK directly
+    const isGoogleEndpoint = config.baseUrl.includes('googleapis.com');
 
-    if (shouldUseNative) {
+    if (isGoogleEndpoint) {
         return await renderImageGoogleNative(visualSchema, config);
     }
 
@@ -242,12 +234,6 @@ export async function renderImage(
     if (!isOfficialGoogle && !finalBaseUrl.endsWith('/v1')) {
         finalBaseUrl = finalBaseUrl + '/v1';
     }
-
-    const client = new OpenAI({
-        apiKey: config.apiKey,
-        baseURL: finalBaseUrl,
-        dangerouslyAllowBrowser: true, // Allow browser usage for static export
-    });
 
     // Choose template based on whether reference images are provided
     let prompt: string;
@@ -276,11 +262,17 @@ export async function renderImage(
         }];
     }
 
+    // Direct client-side API call (pure frontend mode)
+    const client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: finalBaseUrl,
+        dangerouslyAllowBrowser: true,
+    });
+
     const response = await client.chat.completions.create({
         model: config.modelName,
         messages: [{ role: 'user', content }],
         temperature: 0.7,
-        max_tokens: 4096,
     });
 
     const resultContent = response.choices?.[0]?.message?.content || '';
