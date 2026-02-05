@@ -23,6 +23,8 @@
 
 [![Alibaba Cloud ESA](frontend/O1CN01H1UU3i1Cti9lYtFrs_!!6000000000139-2-tps-7534-844.png)](https://aia.6b4dd083.er.aliyun-esa.net)
 
+#阿里云ESAPages #阿里云云工开物
+
 </div>
 
 ---
@@ -53,7 +55,7 @@
 
 ## 📚 教程与资源
 
-- **视频教程**: [Bilibili - Deepseek + Gemini 科研绘图工作流](https://www.bilibili.com/video/BV1bMm3BYEKD/?share_source=copy_web&vd_source=bea77ed0ad9ac826c1d942b45b9962c8)
+- **视频教程**: [Bilibili - Deepseek + Gemini 科研绘图工作流](https://www.bilibili.com/video/BV1bMm3BYEKD/?share_source=copy_web&vd_source=bea77ed0ad9ac826c1d942b45b9962c8) / [YouTube - English Tutorial](https://youtu.be/4bSQZxp0Qyk?si=eW8Si1fSPMzCHbSd)
 - **研发作者**: 感谢该教程作者提供的灵感与工作流验证
 
 ## 🤝 致谢
@@ -172,7 +174,7 @@ Visit http://localhost:3000
 
 ## 📚 Tutorial & Resources
 
-- **Video Tutorial**: [Bilibili - Deepseek + Gemini Scientific Figure Workflow](https://www.bilibili.com/video/BV1bMm3BYEKD/?share_source=copy_web&vd_source=bea77ed0ad9ac826c1d942b45b9962c8)
+- **Video Tutorial**: [Bilibili - Deepseek + Gemini Scientific Figure Workflow](https://www.bilibili.com/video/BV1bMm3BYEKD/?share_source=copy_web&vd_source=bea77ed0ad9ac826c1d942b45b9962c8) / [YouTube - English Tutorial](https://youtu.be/4bSQZxp0Qyk?si=eW8Si1fSPMzCHbSd)
 
 ## 🤝 Acknowledgements
 
