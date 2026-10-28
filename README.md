@@ -1,5 +1,36 @@
 [![AIA Logo](frontend/image.png)](https://aia-academic-illustrator.vercel.app)
 
+## Codex Skill 版本
+
+本仓库新增 [`academic-illustrator`](skills/academic-illustrator/SKILL.md)，把原有的“论文 → 视觉蓝图 → 图片”工作流迁移到 Codex：
+
+```text
+论文 / PDF / 方法说明 → 当前 Codex 设计蓝图 → Codex 内置生图
+                                              ↓ 按需
+                              image-to-editable-ppt → 可编辑 PPTX
+```
+
+- **逻辑分析**由当前 Codex 完成，**图片生成/修改**使用内置 `image_gen.imagegen`；不需要原网页的模型 API Key 或前后端服务。
+- 保留布局选择、分区、精确文字标签与连线等设计约束，新增实际出图检查和定向修正。
+- 支持只生成蓝图、参考图引导、修改已有图，以及衔接已安装的 [`image-to-editable-ppt`](https://github.com/ningzimu/image-to-editable-ppt-skill)。PPT 拆解完整遵循该 Skill 的安装检查、OCR、页面分派、素材处理、后端回退、验证和组装流程，不另写简化版；不能用整页截图冒充可编辑对象。
+- Skill 不提供网页调用内置模型的 HTTP 接口；下方原网页使用文档与 `frontend/`、`backend/` 代码仍保留，互不替换。
+
+### 安装与调用
+
+将 `skills/academic-illustrator` 整个目录复制到当前 Codex 的用户 Skill 目录（此环境为 `${CODEX_HOME:-$HOME/.codex}/skills/academic-illustrator`）。保留已有同名 Skill，比较后再更新，不直接覆盖。
+
+```text
+用 $academic-illustrator 把这篇论文的方法部分画成中文学术架构图。
+用 $academic-illustrator 先生成视觉蓝图，等我确认再出图。
+用 $academic-illustrator 生成技术路线图，并继续拆成可编辑 PPTX。
+```
+
+交付图片、`schema.md`、`render-prompt.txt`、`qa.md`；需要 PPT 时追加经过验证的 `.pptx`。学术主图的生成与修正固定使用 Codex 内置工具，不自动退回外部图像 API；进入 PPT 拆解后，图像后端与回退完全按 `image-to-editable-ppt` 原规则处理。
+
+Skill 使用标准 `SKILL.md` 与可选资源目录结构，参见 [OpenAI Skill 文档](https://developers.openai.com/plugins/build/skills)。
+
+---
+
 <div align="center">
 
 [English](#english) | 简体中文

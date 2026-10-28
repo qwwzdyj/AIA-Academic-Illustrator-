@@ -1,0 +1,4 @@
+interface:
+  display_name: "学术绘图 · Academic Illustrator"
+  short_description: "把论文与方法描述变成学术图表，使用 Codex 内置生图并支持可编辑 PPT"
+  default_prompt: "用 $academic-illustrator 分析我提供的论文内容，设计视觉蓝图并用 Codex 内置生图工具生成学术图表；如果我要求可编辑 PPT，再衔接图片拆解重建。"
